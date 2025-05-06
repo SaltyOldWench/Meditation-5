@@ -1,0 +1,192 @@
+<script src="https://cdn.jsdelivr.net/gh/netizenorg/netnet-standard-library/build/nn.min.js"></script>
+<script src="https://unpkg.com/tone"></script>
+
+<script>
+/* global nn */
+
+const keyMappings = [
+  { key: 'a', note: 'C4', color: '#cff800' },
+  { key: 's', note: 'D4', color: '#ffd872' },
+  { key: 'd', note: 'E4', color: '#8dd78f' },
+  { key: 'f', note: 'F4', color: '#c05780' },
+  { key: 'g', note: 'G4', color: '#0065a2' },
+  { key: 'h', note: 'A4', color: '#fc6238' },
+  { key: 'j', note: 'B4', color: '#00a5e3' },
+  { key: 'k', note: 'C5', color: '#ffa23a' },
+];
+
+let boxElements = [];
+let currentMinute = new Date().getMinutes();
+let activeMappings = [];
+
+function updateActiveMappings() {
+  const offset = currentMinute % keyMappings.length;
+
+  activeMappings = [
+    keyMappings[offset % keyMappings.length],
+    keyMappings[(offset + 1) % keyMappings.length],
+    keyMappings[(offset + 2) % keyMappings.length],
+  ];
+
+  activeMappings.forEach((mapping, i) => {
+    if (boxElements[i]) {
+      boxElements[i].set({ innerText: ['A', 'S', 'D'][i] });
+    }
+  });
+}
+
+function title() {
+  nn.create('div').content("top 3 notes dis minute")
+    .css({
+      fontSize: '96px',
+      fontFamily: 'cursive',
+      textAlign: 'center',
+      marginBottom: '40px'
+    })
+    .addTo('#main-wrapper');
+}
+
+function createBox(label, index) {
+  const box = nn.create('div')
+    .set({
+      innerText: label,
+      style: `
+        width: 150px;
+        height: 100px;
+        margin: 10px;
+        padding: 20px;
+        background-color: black;
+        color: white;
+        border: 2px solid black;
+        text-align: center;
+        font-family: sans-serif;
+        font-size: 16px;
+        border-radius: 8px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      `
+    })
+    .addTo('#box-container');
+
+  boxElements[index] = box;
+}
+
+function boxes() {
+  nn.create('div')
+    .set({
+      id: 'box-container',
+      style: `
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        flex-wrap: wrap;
+      `
+    })
+    .addTo('#main-wrapper');
+
+  createBox('A', 0);
+  createBox('S', 1);
+  createBox('D', 2);
+
+  document.addEventListener('keydown', (e) => {
+    const index = ['a', 's', 'd'].indexOf(e.key.toLowerCase());
+    if (index !== -1) {
+      const { note, color } = activeMappings[index];
+      playSound(note);
+      changeBoxVisual(index);
+      document.body.style.backgroundColor = color;
+    }
+  });
+
+  updateActiveMappings();
+}
+
+function playSound(note) {
+  const synth = new Tone.Synth().toDestination();
+  synth.triggerAttackRelease(note, '8n');
+}
+
+function changeBoxVisual(index) {
+  const box = boxElements[index];
+  if (!box) return;
+
+  box.set({
+    innerText: 'Triggered!',
+    style: `
+      background-color: white;
+      color: black;
+      border: 2px solid black;
+      width: 150px;
+      height: 100px;
+      padding: 20px;
+      margin: 10px;
+      font-family: sans-serif;
+      font-size: 16px;
+      text-align: center;
+      border-radius: 8px;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+    `
+  });
+
+  setTimeout(() => {
+    const originalKey = ['A', 'S', 'D'][index];
+    box.set({
+      innerText: originalKey,
+      style: `
+        background-color: black;
+        color: white;
+        border: 2px solid black;
+        width: 150px;
+        height: 100px;
+        padding: 20px;
+        margin: 10px;
+        font-family: sans-serif;
+        font-size: 16px;
+        text-align: center;
+        border-radius: 8px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      `
+    });
+  }, 1000);
+}
+
+function waitForToneAndRunBoxes() {
+  if (typeof Tone !== 'undefined') {
+    nn.create('div')
+      .set({
+        id: 'main-wrapper',
+        style: `
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+          width: 100vw;
+        `
+      })
+      .addTo('body');
+
+    document.body.style.transition = 'background-color 0.5s ease';
+
+    title();
+    boxes();
+
+    setInterval(() => {
+      const newMinute = new Date().getMinutes();
+      if (newMinute !== currentMinute) {
+        currentMinute = newMinute;
+        updateActiveMappings();
+      }
+    }, 1000);
+  } else {
+    setTimeout(waitForToneAndRunBoxes, 100);
+  }
+}
+
+nn.on('load', waitForToneAndRunBoxes);
+</script>
